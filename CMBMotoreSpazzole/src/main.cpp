@@ -8,7 +8,8 @@
 DynamicJsonDocument data(1024);
 
 // Simplefoc components
-PIDController controllo_vel = PIDController(0.5, 10, 0.0, 100, 100);
+PIDController controllo_vel_apre = PIDController(0.5, 5.0, 0.0, 300, 100); // configurazione originale
+PIDController controllo_vel_chiude = PIDController(0.2, 2.5, 0.0, 300, 100);
 Encoder encoder = Encoder(H1, H2, 88);
 void doA() { encoder.handleA(); }
 void doB() { encoder.handleB(); }
@@ -52,6 +53,7 @@ int currentMeasured = 0;
 
 // parametri controllabili
 long timeoutDuration = DEFAULT_TIMEOUT;
+long timeoutOpen = DEFAULT_OPEN_TIMEOUT;
 int pulseStart = DEFAULT_RAIL_LENGTH_PULSES * DEFAULT_RAIL_START;
 int pulseEnd = DEFAULT_RAIL_LENGTH_PULSES * DEFAULT_RAIL_END;
 int rpmOpen = radSecToRpm(DEFAULT_RAD_OPEN);
@@ -67,7 +69,7 @@ void initPins()
   // analogSetAttenuation(ADC_0db);
 
   pinMode(PULSANTE, INPUT_PULLUP);
-  pinMode(POTENZIOMETRO, INPUT_PULLUP);
+  // pinMode(POTENZIOMETRO, INPUT_PULLUP);
 
   pinMode(H1, INPUT_PULLUP);
   pinMode(H2, INPUT_PULLUP);
@@ -161,41 +163,43 @@ bool updateState(int pulses, float speed, long millis)
   case STATE_START:
     // dopo setup passo in automatico a inactive
     break;
-  case STATE_INACTIVE:
+  case STATE_INACTIVE: // state 1
     if (buttonPressed || okReceived)
     {
       buttonPressed = false;
       okReceived = false;
 
-      railLengthPulses = (maxPulses - minPulses);
+      railLengthPulses = 1340;
+      // railLengthPulses = (maxPulses - minPulses);
       pulseStart = minPulses + (railLengthPulses * railStart);
       pulseEnd = minPulses + (railLengthPulses * railEnd);
 
       currentSystemState = STATE_INIZIOCORSA;
     }
     break;
-  case STATE_INIZIOCORSA:
+  case STATE_INIZIOCORSA: // state 2
     if (millis - timeoutStart > timeoutDuration)
     {
       timeoutStart = 0;
       currentSystemState = STATE_APERTURA;
+      currentPulses = 0;
     }
     break;
-  case STATE_APERTURA:
+  case STATE_APERTURA: // state 3
     if (pulses >= pulseEnd)
     {
       timeoutStart = millis;
       currentSystemState = STATE_FINECORSA;
     }
     break;
-  case STATE_FINECORSA:
-    if (millis - timeoutStart > timeoutDuration)
+  case STATE_FINECORSA: // state 4
+    if (millis - timeoutStart > timeoutOpen)
     {
       timeoutStart = 0;
       currentSystemState = STATE_CHIUSURA;
     }
     break;
-  case STATE_CHIUSURA:
+  case STATE_CHIUSURA: // state 5
     if (pulses <= pulseStart)
     {
       timeoutStart = millis;
@@ -227,7 +231,7 @@ void TaskControl(void *pvParameters) // task controllo motore
     case STATE_START:
       // non fare niente
       break;
-    case STATE_INACTIVE:
+    case STATE_INACTIVE: // 1
       // motore staccato, salva minimo e massimo rotaia trovati
 
       minPulses = min(minPulses, currentPulses);
@@ -237,31 +241,31 @@ void TaskControl(void *pvParameters) // task controllo motore
       ledcWrite(PWM_CHANNEL_1, 0);
       ledcWrite(PWM_CHANNEL_2, 0);
       break;
-    case STATE_INIZIOCORSA:
+    case STATE_INIZIOCORSA: // 2
       // freno attivo, non dare potenza
       targetSpeed = 0;
       ledcWrite(PWM_CHANNEL_1, 255);
       ledcWrite(PWM_CHANNEL_2, 255);
       break;
-    case STATE_APERTURA:
-      // muovi a velocità costante
+    case STATE_APERTURA: // 3
+      // muovi a velocitÃ  costante
       targetSpeed = rpmToRadSec(rpmOpen);
       break;
-    case STATE_FINECORSA:
-      // freno attivo, non dare potenza
+    case STATE_FINECORSA: // 4
+      // freno disaattivo, non dare potenza
       targetSpeed = 0;
-      ledcWrite(PWM_CHANNEL_1, 255);
-      ledcWrite(PWM_CHANNEL_2, 255);
+      ledcWrite(PWM_CHANNEL_1, 0);
+      ledcWrite(PWM_CHANNEL_2, 0);
       break;
-    case STATE_CHIUSURA:
-      // muovi a velocità costante inversa e maggiore
+    case STATE_CHIUSURA: // 5
+      // muovi a velocitÃ  costante inversa e maggiore
       targetSpeed = rpmToRadSec(rpmClose);
       break;
     }
 
     if (currentSystemState != STATE_INACTIVE)
     {
-      power = controllo_vel(targetSpeed - currentSpeed);
+      power = controllo_vel_apre(targetSpeed - currentSpeed);
 
       // if (pulsantePremuto || true)
       //{
@@ -270,17 +274,22 @@ void TaskControl(void *pvParameters) // task controllo motore
 
         if (currentSystemState == STATE_CHIUSURA)
         {
-          float powerReverse=map(power, 0, 100, 0, 255);
+          power = controllo_vel_chiude(targetSpeed - currentSpeed);
+          // float powerReverse = map(power, 0, 100, 100, 255);
 
           if (power > 0)
           {
-            ledcWrite(PWM_CHANNEL_1, 155 + power);
-            ledcWrite(PWM_CHANNEL_2, 1);
+            // Serial.println("we are NOT braking  ");
+            ledcWrite(PWM_CHANNEL_1, map(power, 0, 100, 100, 255));
+            ledcWrite(PWM_CHANNEL_2, 255);
           }
           else
           {
-            ledcWrite(PWM_CHANNEL_1, 1);
-            ledcWrite(PWM_CHANNEL_2, 155 - power);
+            // Serial.print("we are braking  ");
+            // Serial.println();
+            ledcWrite(PWM_CHANNEL_1, map(-power * 2.55, 0, 255, 255, 0));
+            ledcWrite(PWM_CHANNEL_2, 255);
+            // ledcWrite(PWM_CHANNEL_2, map(-power * 2.55, 0, 255, 255, 0));
           }
         }
         else
@@ -349,9 +358,9 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
   int lastSent = 0;
   while (1)
   {
-    if (millis() - lastSent >= 9)
+    if (millis() - lastSent >= 10)
     {
-
+      // data["millis"] = millis();
       data["state"] = currentSystemState;
       data["pulses"] = currentPulses;
       data["posizione"] = getPercentagePosition() * 100;
@@ -360,7 +369,27 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
       data["target"] = radSecToRpm(targetSpeed);
       data["speed"] = radSecToRpm(currentSpeed);
       data["millis"] = millis();
+      data["encoder"] = potenziometro;
 
+      /*data["state"] = currentSystemState;
+      data["pulses"] = currentPulses;
+      data["pulsesEnd"] = pulseEnd;
+      data["minpulses"] = minPulses;
+      data["maxpulses"] = maxPulses;
+      data["railLenght"] = railLengthPulses;
+      data["pulseStart"] = pulseStart;
+      data["pulseEnd"] = pulseEnd;
+      data["angle"] = currentAngle;
+      data["pulsante"] = pulsantePremuto;
+      data["pwm"] = map(potenziometro, 0, 2000, 0, 255);
+      data["posizione"] = getPercentagePosition() * 100;
+      data["pwm"] = power;
+      data["current"] = currentMeasured;
+      data["target"] = radSecToRpm(targetSpeed);
+      data["speed"] = radSecToRpm(currentSpeed);
+      data["millis"] = millis();*/
+      // data["millis"] = millis();
+      // data["millis"] = millis();
       serializeJson(data, logSerial);
       logSerial.println();
       lastSent = millis();

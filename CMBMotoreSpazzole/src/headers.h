@@ -2,7 +2,7 @@
 #define UNDEFINED_VALUE -123456
 
 // pins
-#define I_MOT 23
+#define I_MOT 34
 #define H1 27
 #define H2 26
 #define ADC_BATT 17
@@ -13,7 +13,7 @@
 #define POTENZIOMETRO 14
 
 // costanti motore
-#define PWM_FREQ 100000
+#define PWM_FREQ 25000
 #define PWM_CHANNEL_1 0
 #define PWM_CHANNEL_2 1
 #define PWM_RESOLUTION 8
@@ -22,11 +22,12 @@
 // default parametri impostabili
 #define DEFAULT_RAIL_LENGTH_RAD 120                               // rad
 #define DEFAULT_RAIL_LENGTH_PULSES DEFAULT_RAIL_LENGTH_RAD *POLES // rad
-#define DEFAULT_RAIL_START 0.05                                   //% RAIL_LENGTH
-#define DEFAULT_RAIL_END 0.95                                     //% RAIL_LENGTH
-#define DEFAULT_RAD_OPEN 20                                       // rad/s
-#define DEFAULT_RAD_CLOSE -40                                     // rad/s
-#define DEFAULT_TIMEOUT 5000                                      // ms
+#define DEFAULT_RAIL_START 0.02                                   //% RAIL_LENGTH
+#define DEFAULT_RAIL_END 0.98                                     //% RAIL_LENGTH
+#define DEFAULT_RAD_OPEN 18                                       // rad/s
+#define DEFAULT_RAD_CLOSE -7                                     // rad/s
+#define DEFAULT_TIMEOUT 2000                                      // ms
+#define DEFAULT_OPEN_TIMEOUT 700                                  // ms
 
 // stati per macchina a stati
 #define STATE_START 0
