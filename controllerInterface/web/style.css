@@ -38,6 +38,16 @@
     width: fit-content;
 }
 
+.title-box{
+    font-size: xx-large;
+    font-weight: bold;
+    margin-top: 1em;
+}
+
+.row-box{
+    border:1px solid black;
+}
+
 #btn-help {
     height: 40px;
     width: 40px;

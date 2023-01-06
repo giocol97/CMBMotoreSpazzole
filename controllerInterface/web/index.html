@@ -17,7 +17,6 @@
       let op = document.getElementById('input-box').value;
       let file_div = document.getElementById('file-name');
 
-      // Call into Python so we can access the file system
       let random_filename = await eel.choose_op(op)();
       file_div.innerHTML = random_filename;
     }
@@ -35,12 +34,32 @@
         <button type="button" class="btn btn-info" onclick="resetDrive()"
           style="font-size:x-large; margin-top:2em;">Reset</button>
         <button type="button" class="btn btn-success" onclick="startDrive()"
-          style="font-size:x-large; margin-top:2em;">START</button>
+          style="font-size:x-large; margin-top:2em; display:none;" id="start-button">START</button>
 
-        <button type="button" class="btn btn-outline-success" onclick="connectSerial()">Connect Serial</button>
-        <button type="button" class="btn btn-outline-danger" onclick="disconnectSerial()">Disconnect Serial</button>
+        <button type="button" class="btn btn-danger" onclick="stopDrive()"
+          style="font-size:x-large; margin-top:2em; display: none;" id="stop-button">STOP</button>
+        <div id="com-port" style="margin-right:1em;display:inline;"></div>
+        <button class="btn btn-primary" onclick="refreshPorts()">↻</button>
+        <button type="button" class="btn btn-outline-success" id="connect-button"
+          onclick="connectSerial()">Connetti</button>
+        <button type="button" class="btn btn-outline-danger" id="disconnect-button" style="display:none;"
+          onclick="disconnectSerial()">Disconnetti</button>
 
         <button type="button" class="btn btn-warning" onclick="saveCsv()">Download CSV</button>
+
+
+
+        <button type="button" class="btn btn-success" onclick="startConfig()" id="startConfig-button"
+          style="font-size:large; margin-top:2em; display:none;">Inizia Configurazione Rotaia</button>
+
+        <button type="button" class="btn btn-danger" onclick="endConfig()" id="endConfig-button"
+          style="font-size:large; margin-top:2em; display:none;">Termina Configurazione Rotaia</button>
+
+          <button type="button" class="btn btn-success" onclick="startContTest()" id="startContTest-button"
+          style="font-size:large; margin-top:2em; display:none;">Inizia Test Continuo</button>
+
+        <button type="button" class="btn btn-danger" onclick="endContTest()" id="endContTest-button"
+          style="font-size:large; margin-top:2em; display:none;">Termina Test Continuo</button>
 
         <h4>
           Data logging:
@@ -79,6 +98,14 @@
             <div>Current:</div><br>
             <div id="current">0</div>
           </div>
+          <div class="dataElement">
+            <div>Voltage:</div><br>
+            <div id="battery">0</div>
+          </div>
+          <div class="dataElement">
+            <div>Encoder:</div><br>
+            <div id="encoder">0</div>
+          </div>
         </div>
 
         <!--
@@ -91,26 +118,44 @@
       float tmprailEnd = UNDEFINED_VALUE;
 
       sscanf(command.c_str(), "Set;%d;%d;%d;%d;%d;%f;%f;", &tmptimeoutDuration, &tmppulseStart, &tmppulseEnd, &tmprpmOpen, &tmprpmClose, &tmprailStart, &tmprailEnd);-->
-        <div class="row">
-          Valore "-123456" significa non modificare valore già presente su sistema. <br>
-          <div class="input-box">timeoutDuration <input id="input-timeoutDuration" value="-123456" type="text"></div>
+
+        <div class="row row-box">
+          <div class="title-box">Costanti controllo algoritmo</div>
+          <div class="input-box">timeoutDuration <input id="input-timeDuration" value="-123456" type="text"></div>
+          <div class="input-box">timeoutOpen <input id="input-timeOpen" value="-123456" type="text"></div>
           <div class="input-box">pulseStart <input id="input-pulseStart" value="-123456" type="text"></div>
           <div class="input-box">pulseEnd <input id="input-pulseEnd" value="-123456" type="text"></div>
           <div class="input-box">rpmOpen <input id="input-rpmOpen" value="-123456" type="text"></div>
           <div class="input-box">rpmClose <input id="input-rpmClose" value="-123456" type="text"></div>
           <div class="input-box">railStart <input id="input-railStart" value="-123456" type="text"></div>
           <div class="input-box">railEnd <input id="input-railEnd" value="-123456" type="text"></div>
-
-          <br>
-          <button class="btn btn-success" onclick="sendData()">Send to micro</button>
-
-          <input type="text" id="output-box" value="Set;-123456;-123456;-123456;-123456;-123456;-123456;-123456;">
-          <button class="btn btn-warning" onclick="setValues()">Set form</button>
-
+          <div>Valore "-123456" significa non modificare valore già presente su sistema. </div>
+        </div>
+        <div class="row row-box">
+          <div class="title-box">PID Apertura</div>
+          <div class="input-box">P <input id="input-pidOpenKp" value="-123456" type="text"></div>
+          <div class="input-box">I <input id="input-pidOpenKi" value="-123456" type="text"></div>
+          <div class="input-box">D <input id="input-pidOpenKd" value="-123456" type="text"></div>
+        </div>
+        <div class="row row-box">
+          <div class="title-box">PID Chiusura</div>
+          <div class="input-box">P <input id="input-pidCloseKp" value="-123456" type="text"></div>
+          <div class="input-box">I <input id="input-pidCloseKi" value="-123456" type="text"></div>
+          <div class="input-box">D <input id="input-pidCloseKd" value="-123456" type="text"></div>
         </div>
         <div class="row">
-          <button class="btn btn-danger" onclick="clearlog()">clear</button>
-          Log: <div id="logDiv"></div>
+          <button class="btn btn-success" onclick="sendData()">Carica parametri</button>
+          <button class="btn btn-success" onclick="getData()">Ricevi parametri su micro</button>
+          <button class="btn btn-warning" onclick="setValues()">Imposta form</button>
+          <input type="text" id="output-box" value="Set;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;">
+        </div>
+        <div class="row">
+          <div class="title-box">
+            Log messaggi:
+          </div>
+          <button class="btn btn-danger" onclick="clearlog()">Pulisci log messaggi</button>
+
+          <div id="logDiv"></div>
 
         </div>
       </div>
