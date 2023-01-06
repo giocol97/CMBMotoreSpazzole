@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>BDLC interface</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+
+  <link href="style.css" rel="stylesheet">
+
+  <script type='text/javascript' src='/eel.js'></script>
+
+  <script type='text/javascript'>
+
+    async function choose_op() {
+      let op = document.getElementById('input-box').value;
+      let file_div = document.getElementById('file-name');
+
+      // Call into Python so we can access the file system
+      let random_filename = await eel.choose_op(op)();
+      file_div.innerHTML = random_filename;
+    }
+
+  </script>
+</head>
+
+<body>
+  <div class="container top-menu">
+  </div>
+
+  <div class="container">
+    <div class="row">
+      <div style="margin-top:3em;">
+        <button type="button" class="btn btn-info" onclick="resetDrive()"
+          style="font-size:x-large; margin-top:2em;">Reset</button>
+        <button type="button" class="btn btn-success" onclick="startDrive()"
+          style="font-size:x-large; margin-top:2em;">START</button>
+
+        <button type="button" class="btn btn-outline-success" onclick="connectSerial()">Connect Serial</button>
+        <button type="button" class="btn btn-outline-danger" onclick="disconnectSerial()">Disconnect Serial</button>
+
+        <button type="button" class="btn btn-warning" onclick="saveCsv()">Download CSV</button>
+
+        <h4>
+          Data logging:
+        </h4>
+
+        <div class="row">
+          <div class="dataElement">
+            <div>Time:</div> <br>
+            <div id="time">0</div>
+          </div>
+          <div class="dataElement">
+            <div>Pulses:</div> <br>
+            <div id="pulses">0</div>
+          </div>
+          <div class="dataElement">
+            <div>Speed:</div><br>
+            <div id="speed">0</div>
+          </div>
+          <div class="dataElement">
+            <div>PWM:</div> <br>
+            <div id="pwm">0</div>
+          </div>
+          <div class="dataElement">
+            <div>Target:</div> <br>
+            <div id="target">0</div>
+          </div>
+          <div class="dataElement">
+            <div>Position (%):</div> <br>
+            <div id="position">0</div>
+          </div>
+          <div class="dataElement">
+            <div>State:</div><br>
+            <div id="state">0</div>
+          </div>
+          <div class="dataElement">
+            <div>Current:</div><br>
+            <div id="current">0</div>
+          </div>
+        </div>
+
+        <!--
+      long tmptimeoutDuration = UNDEFINED_VALUE;
+      int tmppulseStart = UNDEFINED_VALUE;
+      int tmppulseEnd = UNDEFINED_VALUE;
+      int tmprpmOpen = UNDEFINED_VALUE;
+      int tmprpmClose = UNDEFINED_VALUE;
+      float tmprailStart = UNDEFINED_VALUE;
+      float tmprailEnd = UNDEFINED_VALUE;
+
+      sscanf(command.c_str(), "Set;%d;%d;%d;%d;%d;%f;%f;", &tmptimeoutDuration, &tmppulseStart, &tmppulseEnd, &tmprpmOpen, &tmprpmClose, &tmprailStart, &tmprailEnd);-->
+        <div class="row">
+          Valore "-123456" significa non modificare valore già presente su sistema. <br>
+          <div class="input-box">timeoutDuration <input id="input-timeoutDuration" value="-123456" type="text"></div>
+          <div class="input-box">pulseStart <input id="input-pulseStart" value="-123456" type="text"></div>
+          <div class="input-box">pulseEnd <input id="input-pulseEnd" value="-123456" type="text"></div>
+          <div class="input-box">rpmOpen <input id="input-rpmOpen" value="-123456" type="text"></div>
+          <div class="input-box">rpmClose <input id="input-rpmClose" value="-123456" type="text"></div>
+          <div class="input-box">railStart <input id="input-railStart" value="-123456" type="text"></div>
+          <div class="input-box">railEnd <input id="input-railEnd" value="-123456" type="text"></div>
+
+          <br>
+          <button class="btn btn-success" onclick="sendData()">Send to micro</button>
+
+          <input type="text" id="output-box" value="Set;-123456;-123456;-123456;-123456;-123456;-123456;-123456;">
+          <button class="btn btn-warning" onclick="setValues()">Set form</button>
+
+        </div>
+        <div class="row">
+          <button class="btn btn-danger" onclick="clearlog()">clear</button>
+          Log: <div id="logDiv"></div>
+
+        </div>
+      </div>
+    </div>
+</body>
+<script src="https://code.jquery.com/jquery-3.6.1.slim.min.js"
+  integrity="sha256-w8CvhFs7iHNVUtnSP0YKEg00p9Ih13rlL9zGqvLdePA=" crossorigin="anonymous"></script>
+<script type='text/javascript' src='script.js'></script>
+
+
+
+</html>

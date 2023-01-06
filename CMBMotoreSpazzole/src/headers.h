@@ -20,14 +20,13 @@
 #define POLES 11
 
 // default parametri impostabili
-#define DEFAULT_RAIL_LENGTH_RAD 120                       // rad
+#define DEFAULT_RAIL_LENGTH_RAD 120                               // rad
 #define DEFAULT_RAIL_LENGTH_PULSES DEFAULT_RAIL_LENGTH_RAD *POLES // rad
-#define DEFAULT_RAIL_START 0.05                           //% RAIL_LENGTH
-#define DEFAULT_RAIL_END 0.9                              //% RAIL_LENGTH
-#define DEFAULT_RAD_OPEN 20   // rad/s
-#define DEFAULT_RAD_CLOSE -40 // rad/s
-#define DEFAULT_TIMEOUT 5000  // ms
-
+#define DEFAULT_RAIL_START 0.05                                   //% RAIL_LENGTH
+#define DEFAULT_RAIL_END 0.95                                     //% RAIL_LENGTH
+#define DEFAULT_RAD_OPEN 20                                       // rad/s
+#define DEFAULT_RAD_CLOSE -40                                     // rad/s
+#define DEFAULT_TIMEOUT 5000                                      // ms
 
 // stati per macchina a stati
 #define STATE_START 0

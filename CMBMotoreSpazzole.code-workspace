@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../../Gitkraken Repositories/BDLCMotorController"
+		},
+		{
+			"path": "."
 		}
 	],
 	"settings": {

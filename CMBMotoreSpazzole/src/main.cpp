@@ -61,7 +61,7 @@ float railEnd = DEFAULT_RAIL_END;
 
 void initPins()
 {
-  pinMode(I_MOT, INPUT);
+  // pinMode(I_MOT, INPUT);
 
   // analogReadResolution(10);
   // analogSetAttenuation(ADC_0db);
@@ -218,7 +218,7 @@ void TaskControl(void *pvParameters) // task controllo motore
     currentSpeed = filter(currentSpeed);
 
     currentAngle = encoder.getAngle();
-    currentPulses = (int)encoder.getAngle() * POLES;
+    currentPulses = (int)(encoder.getAngle() * POLES);
 
     updateState(currentPulses, currentSpeed, millis());
 
@@ -232,12 +232,14 @@ void TaskControl(void *pvParameters) // task controllo motore
 
       minPulses = min(minPulses, currentPulses);
       maxPulses = max(maxPulses, currentPulses);
+      targetSpeed = 0;
 
       ledcWrite(PWM_CHANNEL_1, 0);
       ledcWrite(PWM_CHANNEL_2, 0);
       break;
     case STATE_INIZIOCORSA:
       // freno attivo, non dare potenza
+      targetSpeed = 0;
       ledcWrite(PWM_CHANNEL_1, 255);
       ledcWrite(PWM_CHANNEL_2, 255);
       break;
@@ -247,30 +249,53 @@ void TaskControl(void *pvParameters) // task controllo motore
       break;
     case STATE_FINECORSA:
       // freno attivo, non dare potenza
+      targetSpeed = 0;
       ledcWrite(PWM_CHANNEL_1, 255);
       ledcWrite(PWM_CHANNEL_2, 255);
       break;
     case STATE_CHIUSURA:
       // muovi a velocità costante inversa e maggiore
-      targetSpeed = -rpmToRadSec(rpmClose);
+      targetSpeed = rpmToRadSec(rpmClose);
       break;
     }
 
-    power = controllo_vel(targetSpeed - currentSpeed);
-
-    // if (pulsantePremuto || true)
-    //{
-    if (targetSpeed != 0)
+    if (currentSystemState != STATE_INACTIVE)
     {
-      if (power > 0)
+      power = controllo_vel(targetSpeed - currentSpeed);
+
+      // if (pulsantePremuto || true)
+      //{
+      if (targetSpeed != 0)
       {
-        ledcWrite(PWM_CHANNEL_1, 155 + power);
-        ledcWrite(PWM_CHANNEL_2, 0);
-      }
-      else
-      {
-        ledcWrite(PWM_CHANNEL_1, 0);
-        ledcWrite(PWM_CHANNEL_2, 155 - power);
+
+        if (currentSystemState == STATE_CHIUSURA)
+        {
+          float powerReverse=map(power, 0, 100, 0, 255);
+
+          if (power > 0)
+          {
+            ledcWrite(PWM_CHANNEL_1, 155 + power);
+            ledcWrite(PWM_CHANNEL_2, 1);
+          }
+          else
+          {
+            ledcWrite(PWM_CHANNEL_1, 1);
+            ledcWrite(PWM_CHANNEL_2, 155 - power);
+          }
+        }
+        else
+        {
+          if (power > 0)
+          {
+            ledcWrite(PWM_CHANNEL_1, 155 + power);
+            ledcWrite(PWM_CHANNEL_2, 0);
+          }
+          else
+          {
+            ledcWrite(PWM_CHANNEL_1, 0);
+            ledcWrite(PWM_CHANNEL_2, 155 - power);
+          }
+        }
       }
     }
 
@@ -299,7 +324,7 @@ void TaskData(void *pvParameters) // task raccolta dati
       }
       potenziometro = analogRead(POTENZIOMETRO);
 
-      currentMeasured = analogRead(I_MOT);//TODO trasformare in corrente
+      currentMeasured = analogRead(I_MOT); // TODO trasformare in corrente
     }
 
     vTaskDelay(1);
@@ -308,7 +333,14 @@ void TaskData(void *pvParameters) // task raccolta dati
 
 float getPercentagePosition()
 {
-  return (currentPulses - minPulses) / (maxPulses - minPulses);
+  if (maxPulses == minPulses)
+  {
+    return 0;
+  }
+  else
+  {
+    return (currentPulses - minPulses) / (maxPulses - minPulses);
+  }
 }
 
 void TaskSerial(void *pvParameters) // task comunicazione con seriale
@@ -317,14 +349,12 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
   int lastSent = 0;
   while (1)
   {
-    if (millis() - lastSent >= 10)
+    if (millis() - lastSent >= 9)
     {
 
+      data["state"] = currentSystemState;
       data["pulses"] = currentPulses;
-      // data["angle"] = currentAngle;
-      //  data["pulsante"] = pulsantePremuto;
-      //  data["pwm"] = map(potenziometro, 0, 2000, 0, 255);
-      data["posizione"] = getPercentagePosition();
+      data["posizione"] = getPercentagePosition() * 100;
       data["pwm"] = power;
       data["current"] = currentMeasured;
       data["target"] = radSecToRpm(targetSpeed);
