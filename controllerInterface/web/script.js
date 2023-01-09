@@ -270,7 +270,7 @@ function clearlog() {
     $("#logDiv").text("");
 }
 
-function parseGet() {    
+function parseGet(text) {    
     var values = text.split(";");
     $("#input-timeDuration").val(values[1]);
     $("#input-timeOpen").val(values[2]);
@@ -291,7 +291,7 @@ function parseGet() {
 function appendToLog(text) {
 
     //if text starts with Get; parse the parameters
-    if (text.indexOf("asdasdasd") != -1) {
+    if (text.indexOf("Get;") != -1) {
         parseGet(text);
     }
 

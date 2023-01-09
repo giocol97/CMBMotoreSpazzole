@@ -30,7 +30,7 @@
 #define DEFAULT_RAIL_END 0.98                                   //% RAIL_LENGTH
 #define DEFAULT_RAD_OPEN 18                                     // rad/s
 #define DEFAULT_RAD_CLOSE -7                                    // rad/s
-#define DEFAULT_TIMEOUT 2000                                    // ms
+#define DEFAULT_TIMEOUT 4000                                    // ms
 #define DEFAULT_OPEN_TIMEOUT 700                                // ms
 
 // default parametri PID

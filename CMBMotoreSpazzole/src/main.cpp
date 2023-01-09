@@ -67,6 +67,8 @@ float targetSpeed = 0;
 
 float power = 0;
 
+int pulseOffset = 0;
+
 // input utente
 bool buttonPressed = false;
 bool buttonLongPressed = false;
@@ -231,7 +233,8 @@ bool updateState(int pulses, float speed, long millis)
     {
       timeoutStart = 0;
       currentSystemState = STATE_APERTURA;
-      currentPulses = 0;
+      //currentPulses = 0;
+      pulseOffset=-currentPulses;
     }
     break;
   case STATE_APERTURA: // state 3
@@ -292,7 +295,7 @@ void TaskControl(void *pvParameters) // task controllo motore
     currentSpeed = speedFilter(currentSpeed);
 
     currentAngle = encoder.getAngle();
-    currentPulses = (int)(encoder.getAngle() * POLES);
+    currentPulses = (int)(encoder.getAngle() * POLES) + pulseOffset;
 
     updateState(currentPulses, currentSpeed, millis());
 
@@ -562,21 +565,21 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
         logSerial.println("endConfigOk");
       }
 
-      if(command.indexOf("contTest0") >= 0)
+      if (command.indexOf("contTest0") >= 0)
       {
         continousTestActive = true;
         logSerial.println("Test continuo attivato");
-      } 
+      }
 
-      if(command.indexOf("contTest1") >= 0)
+      if (command.indexOf("contTest1") >= 0)
       {
         continousTestActive = false;
         logSerial.println("Test continuo disattivato");
       }
 
-      if(command.indexOf("Get;") >= 0)
+      if (command.indexOf("Get;") >= 0)
       {
-        logSerial.printf("Get;%d;%d;%d;%d;%d;%d;%f;%f;%f;%f;%f;%f;%f;%f;\n",timeoutDuration, timeoutOpen, pulseStart, pulseEnd, rpmOpen, rpmClose, railStart, railEnd, kpOpen, kiOpen, kdOpen, kpClose, kiClose, kdClose);
+        logSerial.printf("Get;%d;%d;%d;%d;%d;%d;%f;%f;%f;%f;%f;%f;%f;%f;\n", timeoutDuration, timeoutOpen, pulseStart, pulseEnd, rpmOpen, rpmClose, railStart, railEnd, kpOpen, kiOpen, kdOpen, kpClose, kiClose, kdClose);
         continue;
       }
 
