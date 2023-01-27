@@ -67,7 +67,7 @@ float targetSpeed = 0;
 
 float power = 0;
 
-int pulseOffset = 0;
+// int pulseOffset = 0;
 
 // input utente
 bool buttonPressed = false;
@@ -127,6 +127,30 @@ float rpmToRadSec(int rpm)
   return rpm * 2 * PI / 60;
 }
 
+void initVariables()
+{
+  preferences.begin(CONFIG_NAMESPACE, false);
+
+  timeoutDuration = preferences.getLong("timeoutDuration", DEFAULT_TIMEOUT);
+  timeoutOpen = preferences.getLong("timeoutOpen", DEFAULT_OPEN_TIMEOUT);
+  pulseStart = preferences.getInt("pulseStart", DEFAULT_RAIL_LENGTH_PULSES * DEFAULT_RAIL_START);
+  pulseEnd = preferences.getInt("pulseEnd", DEFAULT_RAIL_LENGTH_PULSES * DEFAULT_RAIL_END);
+  rpmOpen = preferences.getInt("rpmOpen", radSecToRpm(DEFAULT_RAD_OPEN));
+  rpmClose = preferences.getInt("rpmClose", radSecToRpm(DEFAULT_RAD_CLOSE));
+  railStart = preferences.getFloat("railStart", DEFAULT_RAIL_START);
+  railEnd = preferences.getFloat("railEnd", DEFAULT_RAIL_END);
+
+  kpOpen = preferences.getFloat("kpOpen", DEFAULT_KP_OPEN);
+  kiOpen = preferences.getFloat("kiOpen", DEFAULT_KI_OPEN);
+  kdOpen = preferences.getFloat("kdOpen", DEFAULT_KD_OPEN);
+
+  kpClose = preferences.getFloat("kpClose", DEFAULT_KP_CLOSE);
+  kiClose = preferences.getFloat("kiClose", DEFAULT_KI_CLOSE);
+  kdClose = preferences.getFloat("kdClose", DEFAULT_KD_CLOSE);
+
+  preferences.end();
+}
+
 void setup()
 {
   WiFi.mode(WIFI_OFF);
@@ -135,6 +159,8 @@ void setup()
 
   logSerial.begin(LOG_BAUD, SERIAL_8N1);
   logSerial.println("Starting");
+
+  initVariables();
 
   initPins();
 
@@ -233,8 +259,11 @@ bool updateState(int pulses, float speed, long millis)
     {
       timeoutStart = 0;
       currentSystemState = STATE_APERTURA;
-      //currentPulses = 0;
-      pulseOffset=-currentPulses;
+      // currentPulses = 0;
+      // pulseOffset = -currentPulses;
+
+      // PROVA RE INIZIALIZZAZIONE ENCODER
+      encoder.init();
     }
     break;
   case STATE_APERTURA: // state 3
@@ -295,7 +324,7 @@ void TaskControl(void *pvParameters) // task controllo motore
     currentSpeed = speedFilter(currentSpeed);
 
     currentAngle = encoder.getAngle();
-    currentPulses = (int)(encoder.getAngle() * POLES) + pulseOffset;
+    currentPulses = (int)(encoder.getAngle() * POLES) /*+ pulseOffset*/;
 
     updateState(currentPulses, currentSpeed, millis());
 
@@ -621,66 +650,84 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
 
       // TODO check input
 
+      preferences.begin(CONFIG_NAMESPACE, false);
+
       if (tmptimeoutDuration != UNDEFINED_VALUE)
       {
         timeoutDuration = tmptimeoutDuration;
+        preferences.putLong("timeoutDuration", timeoutDuration);
       }
       if (tmptimeoutOpen != UNDEFINED_VALUE)
       {
         timeoutOpen = tmptimeoutOpen;
+        preferences.putLong("timeoutOpen", timeoutOpen);
       }
       if (tmppulseStart != UNDEFINED_VALUE)
       {
         pulseStart = tmppulseStart;
+        preferences.putInt("pulseStart", pulseStart);
       }
       if (tmppulseEnd != UNDEFINED_VALUE)
       {
         pulseEnd = tmppulseEnd;
+        preferences.putInt("pulseEnd", pulseEnd);
       }
       if (tmprpmOpen != UNDEFINED_VALUE)
       {
         rpmOpen = tmprpmOpen;
+        preferences.putInt("rpmOpen", rpmOpen);
       }
       if (tmprpmClose != UNDEFINED_VALUE)
       {
         rpmClose = tmprpmClose;
+        preferences.putInt("rpmClose", rpmClose);
       }
       if (tmprailStart != UNDEFINED_VALUE)
       {
         railStart = tmprailStart;
+        preferences.putFloat("railStart", railStart);
       }
       if (tmprailEnd != UNDEFINED_VALUE)
       {
         railEnd = tmprailEnd;
+        preferences.putFloat("railEnd", railEnd);
       }
 
       // pid apertura
       if (tmppidOpenKp != UNDEFINED_VALUE)
       {
         kpOpen = tmppidOpenKp;
+        preferences.putFloat("kpOpen", kpOpen);
       }
       if (tmppidOpenKi != UNDEFINED_VALUE)
       {
         kiOpen = tmppidOpenKi;
+        preferences.putFloat("kiOpen", kiOpen);
       }
       if (tmppidOpenKd != UNDEFINED_VALUE)
       {
         kdOpen = tmppidOpenKd;
+        preferences.putFloat("kdOpen", kdOpen);
       }
 
       // pid chiusura
       if (tmppidCloseKp != UNDEFINED_VALUE)
       {
         kpClose = tmppidCloseKp;
+        preferences.putFloat("kpClose", kpClose);
       }
       if (tmppidCloseKi != UNDEFINED_VALUE)
       {
         kiClose = tmppidCloseKi;
+        preferences.putFloat("kiClose", kiClose);
       }
       if (tmppidCloseKd != UNDEFINED_VALUE)
       {
         kdClose = tmppidCloseKd;
+        preferences.putFloat("kdClose", kdClose);
       }
+
+      preferences.end();
 
       logSerial.println("Parametri Modificati");
     }
