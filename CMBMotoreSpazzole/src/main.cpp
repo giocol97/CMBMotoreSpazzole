@@ -66,6 +66,8 @@ int potenziometro = 0;
 float targetSpeed = 0;
 
 float power = 0;
+uint8_t pwm1 = 0;
+uint8_t pwm2 = 0;
 
 // int pulseOffset = 0;
 
@@ -369,8 +371,11 @@ void TaskControl(void *pvParameters) // task controllo motore
       maxPulses = max(maxPulses, currentPulses);
       targetSpeed = 0;
 
-      ledcWrite(PWM_CHANNEL_1, 0);
-      ledcWrite(PWM_CHANNEL_2, 0);
+      pwm1 = 0;
+      pwm2 = 0;
+
+      ledcWrite(PWM_CHANNEL_1, pwm1);
+      ledcWrite(PWM_CHANNEL_2, pwm2);
       break;
     }
 
@@ -391,15 +396,19 @@ void TaskControl(void *pvParameters) // task controllo motore
           if (power > 0)
           {
             // Serial.println("we are NOT braking  ");
-            ledcWrite(PWM_CHANNEL_1, map(power, 0, 100, 100, 255));
-            ledcWrite(PWM_CHANNEL_2, 255);
+            pwm1 = map(power, 0, 100, 100, 255);
+            pwm2 = 255;
+            ledcWrite(PWM_CHANNEL_1, pwm1);
+            ledcWrite(PWM_CHANNEL_2, pwm2);
           }
           else
           {
             // Serial.print("we are braking  ");
             // Serial.println();
-            ledcWrite(PWM_CHANNEL_1, map(-power * 2.55, 0, 255, 255, 0));
-            ledcWrite(PWM_CHANNEL_2, 255);
+            pwm1 = map(-power * 2.55, 0, 255, 255, 0);
+            pwm2 = 255;
+            ledcWrite(PWM_CHANNEL_1, pwm1);
+            ledcWrite(PWM_CHANNEL_2, pwm2);
             // ledcWrite(PWM_CHANNEL_2, map(-power * 2.55, 0, 255, 255, 0));
           }
         }
@@ -407,13 +416,17 @@ void TaskControl(void *pvParameters) // task controllo motore
         {
           if (power > 0)
           {
-            ledcWrite(PWM_CHANNEL_1, 155 + power);
-            ledcWrite(PWM_CHANNEL_2, 0);
+            pwm1 = 155 + power;
+            pwm2 = 0;
+            ledcWrite(PWM_CHANNEL_1, pwm1);
+            ledcWrite(PWM_CHANNEL_2, pwm2);
           }
           else
           {
-            ledcWrite(PWM_CHANNEL_1, 0);
-            ledcWrite(PWM_CHANNEL_2, 155 - power);
+            pwm1 = 0;
+            pwm2 = 155 - power;
+            ledcWrite(PWM_CHANNEL_1, pwm1);
+            ledcWrite(PWM_CHANNEL_2, pwm2);
           }
         }
       }
@@ -546,6 +559,10 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
       logSerial.print(logPosizione);
       logSerial.print(",\"pwm\":");
       logSerial.print(logPwm);
+      logSerial.print(",\"pwm1\":");
+      logSerial.print(pwm1);
+      logSerial.print(",\"pwm2\":");
+      logSerial.print(pwm2);
       logSerial.print(",\"current\":");
       logSerial.print(logCurrent);
       logSerial.print(",\"target\":");

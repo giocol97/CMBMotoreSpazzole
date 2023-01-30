@@ -1,6 +1,6 @@
 
 console.log("start");
-csvHeader = "time,pulses,speed,current,target,pwm,position,state,encoder,voltage\n";
+csvHeader = "time,pulses,speed,current,target,pwm1,pwm2,position,state,encoder,voltage\n";
 csv = csvHeader;
 
 var avgPacketTime = 10;
@@ -30,13 +30,15 @@ function addToCsv(json) {
     var speed = parseFloat(obj.speed).toFixed(2);
     var current = parseFloat(obj.current).toFixed(2);
     var target = obj.target;
-    var pwm = obj.pwm;
+    //var pwm = obj.pwm;
+    var pwm1 = obj.pwm1;
+    var pwm2 = obj.pwm2;
     var position = obj.posizione;
     var state = stateToString(obj.state);
     var encoder = obj.encoder;
     var battery = obj.battery;
 
-    csv += time + "," + pulses + "," + speed + "," + current + "," + target + "," + pwm + "," + position + "," + (state) + "," + (encoder) + "," + (battery) + "\n";
+    csv += time + "," + pulses + "," + speed + "," + current + "," + target + "," + pwm1 + "," + pwm2 + "," + position + "," + (state) + "," + (encoder) + "," + (battery) + "\n";
 }
 
 /*function saveCsv() {
@@ -111,8 +113,12 @@ function showData(json) {
     $("#current").text(currentShow);
     var targetShow = parseFloat(obj.target).toFixed(2);
     $("#target").text(targetShow);
-    var targetpwm = parseFloat(obj.pwm).toFixed(2);
-    $("#pwm").text(targetpwm);
+    //var targetpwm = parseFloat(obj.pwm).toFixed(2);
+    //$("#pwm").text(targetpwm);
+    var targetpwm1 = parseFloat(obj.pwm1);
+    $("#pwm1").text(targetpwm1);
+    var targetpwm2 = parseFloat(obj.pwm2);
+    $("#pwm2").text(targetpwm2);
     var targetposition = parseFloat(obj.posizione).toFixed(2);
     $("#position").text(targetposition);
 
@@ -270,7 +276,7 @@ function clearlog() {
     $("#logDiv").text("");
 }
 
-function parseGet(text) {    
+function parseGet(text) {
     var values = text.split(";");
     $("#input-timeDuration").val(values[1]);
     $("#input-timeOpen").val(values[2]);

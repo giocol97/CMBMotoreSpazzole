@@ -55,7 +55,7 @@
         <button type="button" class="btn btn-danger" onclick="endConfig()" id="endConfig-button"
           style="font-size:large; margin-top:2em; display:none;">Termina Configurazione Rotaia</button>
 
-          <button type="button" class="btn btn-success" onclick="startContTest()" id="startContTest-button"
+        <button type="button" class="btn btn-success" onclick="startContTest()" id="startContTest-button"
           style="font-size:large; margin-top:2em; display:none;">Inizia Test Continuo</button>
 
         <button type="button" class="btn btn-danger" onclick="endContTest()" id="endContTest-button"
@@ -78,17 +78,21 @@
             <div>Speed:</div><br>
             <div id="speed">0</div>
           </div>
+          <div class="dataElement" style="display:none;">
+            <div>Position (%):</div> <br>
+            <div id="position">0</div>
+          </div>
           <div class="dataElement">
-            <div>PWM:</div> <br>
-            <div id="pwm">0</div>
+            <div>PWM1:</div> <br>
+            <div id="pwm1">0</div>
+          </div>
+          <div class="dataElement">
+            <div>PWM2:</div> <br>
+            <div id="pwm2">0</div>
           </div>
           <div class="dataElement">
             <div>Target:</div> <br>
             <div id="target">0</div>
-          </div>
-          <div class="dataElement">
-            <div>Position (%):</div> <br>
-            <div id="position">0</div>
           </div>
           <div class="dataElement">
             <div>State:</div><br>
@@ -147,7 +151,8 @@
           <button class="btn btn-success" onclick="sendData()">Carica parametri</button>
           <button class="btn btn-success" onclick="getData()">Ricevi parametri dal micro</button>
           <button class="btn btn-warning" onclick="setValues()">Imposta form</button>
-          <input type="text" id="output-box" value="Set;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;">
+          <input type="text" id="output-box"
+            value="Set;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;-123456;">
         </div>
         <div class="row">
           <div class="title-box">
