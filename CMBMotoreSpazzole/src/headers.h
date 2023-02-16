@@ -21,7 +21,7 @@
 #define PWM_CHANNEL_1 0
 #define PWM_CHANNEL_2 1
 #define PWM_RESOLUTION 8
-#define POLES 11
+#define POLES 21                 //encoder in quadratura:ON misura 4xPPR, quindi 12 poli pagnetici x 2 fronti.
 
 // default parametri impostabili
 #define DEFAULT_RAIL_LENGTH_RAD DEFAULT_RAIL_LENGTH_RAD / POLES // rad

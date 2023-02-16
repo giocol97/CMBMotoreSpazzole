@@ -141,7 +141,7 @@ def serial_thread():
                 serialStarted = False
 
 
-eel.init('controllerInterface/web')
+eel.init('web')
 
 eel.spawn(serial_thread)
 

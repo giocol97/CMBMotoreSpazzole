@@ -8,6 +8,7 @@
 void TaskControl(void *pvParameters);
 void TaskData(void *pvParameters);
 void TaskSerial(void *pvParameters);
+
 int radSecToRpm(float radSec);
 float rpmToRadSec(int rpm);
 
@@ -36,12 +37,12 @@ float kdClose = DEFAULT_KD_CLOSE;
 // Simplefoc components
 PIDController controllo_vel_apre = PIDController(kpOpen, kiOpen, kdOpen, 300, 100); // configurazione originale
 PIDController controllo_vel_chiude = PIDController(kpClose, kiClose, kdClose, 300, 100);
-Encoder encoder = Encoder(H1, H2, 88);
+Encoder encoder = Encoder(H1, H2, 132);
 void doA() { encoder.handleA(); }
 void doB() { encoder.handleB(); }
 LowPassFilter speedFilter = LowPassFilter(0.5);
 LowPassFilter voltageFilter = LowPassFilter(0.5);
-LowPassFilter currentFilter = LowPassFilter(0.5);
+LowPassFilter currentFilter = LowPassFilter(0.05);
 
 HardwareSerial logSerial = Serial;
 
@@ -64,6 +65,11 @@ long timeoutStart = 0;
 long lastHallInterrupt = 0;
 int potenziometro = 0;
 float targetSpeed = 0;
+//variabili necessari per la taratura della misura di corrente.
+int ADC_1500_POS = 360;
+int CURR_OFFSET = 1930;
+int I_MAX_CLOSE = 200;
+int MOT_CURR = 0;
 
 float power = 0;
 uint8_t pwm1 = 0;
@@ -94,8 +100,8 @@ void initPins()
   pinMode(PULSANTE, INPUT_PULLUP);
   // pinMode(POTENZIOMETRO, INPUT_PULLUP);
 
-  pinMode(H1, INPUT_PULLUP);
-  pinMode(H2, INPUT_PULLUP);
+  //pinMode(H1, INPUT_PULLUP);
+  //pinMode(H2, INPUT_PULLUP);
 
   pinMode(ADC_BATT, INPUT);
 
@@ -113,7 +119,9 @@ void initSimpleFOC()
 
   // encoder
   encoder.quadrature = Quadrature::ON;
-  encoder.pullup = Pullup::USE_INTERN;
+  encoder.pullup = Pullup::USE_EXTERN;
+  
+  //encoder.min_elapsed_time = 9.99;
 
   encoder.init();
   encoder.enableInterrupts(doA, doB);
@@ -121,12 +129,12 @@ void initSimpleFOC()
 
 int radSecToRpm(float radSec)
 {
-  return radSec * 60 / (2 * PI);
+  return (radSec * 60) / (2 * PI);
 }
 
 float rpmToRadSec(int rpm)
 {
-  return rpm * 2 * PI / 60;
+  return (rpm * 2) * (PI / 60);
 }
 
 void initVariables()
@@ -169,6 +177,8 @@ void setup()
   initSimpleFOC();
 
   delay(50);
+  //misuro punto 0 della corrente solo una volta all'avvio
+  CURR_OFFSET = analogRead(I_MOT);
 
   currentSystemState = STATE_INACTIVE;
 
@@ -177,7 +187,7 @@ void setup()
       "TaskControl",
       5000,
       NULL,
-      10,
+      25,
       &TaskHandleControl,
       0);
 
@@ -195,7 +205,8 @@ void setup()
       "Taskserial",
       5000,
       NULL,
-      ESP_TASK_PRIO_MAX - 1,
+      //ESP_TASK_PRIO_MAX - 1,
+      5,
       &TaskHandleSerial,
       1);
 }
@@ -205,14 +216,24 @@ void loop()
   vTaskDelete(NULL);
 }
 
-bool updateState(int pulses, float speed, long millis)
+int adcCurrentToMilliAmp(int adcValue)
+{
+  return map(adcValue, CURR_OFFSET, (CURR_OFFSET + ADC_1500_POS), 0, 1500);
+}
+
+int adcVoltageToBatteryVoltage(int adcValue)
+{
+  return map(adcValue, 540, 846, 18000, 26000);
+}
+
+bool updateState(int pulses, float speed, int curr, long millis)
 {
   switch (currentSystemState)
   {
   case STATE_START:
     // dopo setup passo in automatico a inactive
     break;
-  case STATE_INACTIVE:               // state 1
+  case STATE_INACTIVE:               // state
     if (buttonPressed || okReceived) // evento d'inizio ricevuto
     {
       buttonPressed = false;
@@ -241,13 +262,20 @@ bool updateState(int pulses, float speed, long millis)
 
       currentSystemState = STATE_CONFIGURAZIONE;
     }
-    else if (continousTestActive)
+    else if (continousTestActive && radSecToRpm(currentSpeed) == 0)
     {
       timeoutStart = millis;
+      encoder.update();
       currentSystemState = STATE_INIZIOCORSA;
+    }
+    else if (radSecToRpm(currentSpeed) == 0)
+    {
+      encoder.update();
+      //currentPulses = 0;
     }
     break;
   case STATE_INIZIOCORSA: // state 2
+    //currentPulses = 0;
     /*if (buttonPressed || stopReceived)
     {
       buttonPressed = false;
@@ -261,15 +289,15 @@ bool updateState(int pulses, float speed, long millis)
     {
       timeoutStart = 0;
       currentSystemState = STATE_APERTURA;
-      // currentPulses = 0;
+      
       // pulseOffset = -currentPulses;
 
       // PROVA RE INIZIALIZZAZIONE ENCODER
-      encoder.init();
+      //encoder.init();
     }
     break;
   case STATE_APERTURA: // state 3
-    if (pulses >= pulseEnd)
+    if (currentPulses >= pulseEnd)
     {
       timeoutStart = millis;
       currentSystemState = STATE_FINECORSA;
@@ -283,7 +311,7 @@ bool updateState(int pulses, float speed, long millis)
     }
     break;
   case STATE_CHIUSURA: // state 5
-    if (pulses <= pulseStart)
+    if (currentPulses <= pulseStart && curr > I_MAX_CLOSE) // da aggiungere controllo sulla corrente per garantire che l'anta si chiude bene
     {
       // timeoutStart = millis;
       currentSystemState = STATE_INACTIVE;
@@ -294,12 +322,11 @@ bool updateState(int pulses, float speed, long millis)
     {
       buttonLongPressed = false;
       endConfig = false;
+      railLengthPulses = maxPulses - minPulses;
 
       preferences.begin(CONFIG_NAMESPACE);
-      preferences.putInt("rail", maxPulses - minPulses);
-      preferences.end();
-
-      railLengthPulses = maxPulses - minPulses;
+      preferences.putInt("rail", railLengthPulses);
+      preferences.end();      
 
       logSerial.println("Configurazione completata, lunghezza rotaia: " + String(railLengthPulses));
 
@@ -319,21 +346,23 @@ void TaskControl(void *pvParameters) // task controllo motore
   int pwmPower = 0;
 
   while (1)
-  {
-    encoder.update();
+  {    
 
     currentSpeed = encoder.getVelocity();
     currentSpeed = speedFilter(currentSpeed);
 
     currentAngle = encoder.getAngle();
-    currentPulses = (int)(encoder.getAngle() * POLES) /*+ pulseOffset*/;
+    currentPulses = (float)(encoder.getAngle() * POLES) /*+ pulseOffset*/;
 
-    updateState(currentPulses, currentSpeed, millis());
+    MOT_CURR = currentFilter(adcCurrentToMilliAmp(analogRead(I_MOT)));
 
+    updateState(currentPulses, currentSpeed, MOT_CURR, millis());
+    
     switch (currentSystemState)
     {
     case STATE_START:
       // non fare niente
+      targetSpeed = rpmToRadSec(-30);
       break;
     case STATE_INACTIVE: // 1
       // motore staccato, attendi comando per inizio
@@ -478,15 +507,7 @@ float getPercentagePosition()
   }
 }
 
-int adcCurrentToMilliAmp(int adcValue)
-{
-  return map(adcValue, 640, 3300, -5000, 5000);
-}
 
-int adcVoltageToBatteryVoltage(int adcValue)
-{
-  return map(adcValue, 540, 846, 18000, 26000);
-}
 
 void TaskSerial(void *pvParameters) // task comunicazione con seriale
 {
@@ -571,7 +592,7 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
       logSerial.print(logSpeed);
       logSerial.print(",\"millis\":");
       logSerial.print(logMillis);
-      logSerial.print(",\"encoder\":");
+      logSerial.print(",\"encoder\":");      
       logSerial.print(logEncoder);
       logSerial.print(",\"battery\":");
       logSerial.print(logBattery);
