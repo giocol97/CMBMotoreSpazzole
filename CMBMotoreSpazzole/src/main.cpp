@@ -390,10 +390,7 @@ void TaskControl(void *pvParameters) // task controllo motore
       break;
     case STATE_APERTURA: // 3
       // muovi a velocita'  costante
-      for(byte x = 0; x < rpmToRadSec(rpmOpen); x+=1)
-      {
-        targetSpeed = x;
-      }      
+      targetSpeed = rpmToRadSec(rpmOpen);      
       break;
     case STATE_FINECORSA: // 4
       // freno disaattivo, non dare potenza
