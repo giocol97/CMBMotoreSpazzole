@@ -190,6 +190,16 @@ function showData(json) {
             $("#endConfig-button").show();
             $("#startContTest-button").hide();
             break;
+		case 7:
+            state = "Pausa";
+            color = "brown";
+            $("#start-button").show();
+            $("#stop-button").hide();
+            $("#startConfig-button").show();
+            $("#endConfig-button").hide();
+            $("#startContTest-button").hide();
+            $("#endContTest-button").hide();
+            break;	
     }
 
     $("#state").text(state);

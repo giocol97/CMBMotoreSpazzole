@@ -70,6 +70,7 @@ int ADC_1500_POS = 360;
 int CURR_OFFSET = 1930;
 int I_MAX_CLOSE = 200;
 int MOT_CURR = 0;
+byte brakelv = 255;       //livello di frenatura 
 
 float power = 0;
 uint8_t pwm1 = 0;
@@ -180,7 +181,7 @@ void setup()
   //misuro punto 0 della corrente solo una volta all'avvio
   CURR_OFFSET = analogRead(I_MOT);
 
-  currentSystemState = STATE_INACTIVE;
+  currentSystemState = STATE_CHIUSURA;
 
   xTaskCreatePinnedToCore(
       TaskControl,
@@ -251,9 +252,11 @@ bool updateState(int pulses, float speed, int curr, long millis)
       // railLengthPulses = (maxPulses - minPulses);
       pulseStart = minPulses + (railLengthPulses * railStart);
       pulseEnd = minPulses + (railLengthPulses * railEnd);
-
+      
+      logSerial.printf("Get;%d;%d;%d;%d;%d;%d;%f;%f;%f;%f;%f;%f;%f;%f;\n", timeoutDuration, timeoutOpen, pulseStart, pulseEnd, rpmOpen, rpmClose, railStart, railEnd, kpOpen, kiOpen, kdOpen, kpClose, kiClose, kdClose);
+      
       timeoutStart = millis;
-      currentSystemState = STATE_INIZIOCORSA;
+      currentSystemState = STATE_APERTURA;
     }
     else if (buttonLongPressed || startConfig)
     {
@@ -284,7 +287,7 @@ bool updateState(int pulses, float speed, int curr, long millis)
       currentSystemState = STATE_INACTIVE;
       timeoutStart = 0;
     }
-    else*/
+    else
     if (millis - timeoutStart > timeoutDuration && timeoutStart != 0)
     {
       timeoutStart = 0;
@@ -294,7 +297,7 @@ bool updateState(int pulses, float speed, int curr, long millis)
 
       // PROVA RE INIZIALIZZAZIONE ENCODER
       //encoder.init();
-    }
+    }*/
     break;
   case STATE_APERTURA: // state 3
     if (currentPulses >= pulseEnd)
@@ -313,8 +316,8 @@ bool updateState(int pulses, float speed, int curr, long millis)
   case STATE_CHIUSURA: // state 5
     if (currentPulses <= pulseStart && curr > I_MAX_CLOSE) // da aggiungere controllo sulla corrente per garantire che l'anta si chiude bene
     {
-      // timeoutStart = millis;
-      currentSystemState = STATE_INACTIVE;
+      timeoutStart = millis;
+      currentSystemState = STATE_DELAY;
     }
     break;
   case STATE_CONFIGURAZIONE: // state 6
@@ -333,7 +336,14 @@ bool updateState(int pulses, float speed, int curr, long millis)
       pulseStart = minPulses + (railLengthPulses * railStart);
       pulseEnd = minPulses + (railLengthPulses * railEnd);
 
+      currentSystemState = STATE_DELAY;
+    }
+  case STATE_DELAY:       //state 7
+    if (millis - timeoutStart > timeoutDuration && timeoutStart != 0)
+    {
+      timeoutStart = 0;
       currentSystemState = STATE_INACTIVE;
+      buttonPressed = false;
     }
 
     break;
@@ -347,7 +357,6 @@ void TaskControl(void *pvParameters) // task controllo motore
 
   while (1)
   {    
-
     currentSpeed = encoder.getVelocity();
     currentSpeed = speedFilter(currentSpeed);
 
@@ -370,9 +379,8 @@ void TaskControl(void *pvParameters) // task controllo motore
       // minPulses = min(minPulses, currentPulses);
       // maxPulses = max(maxPulses, currentPulses);
       targetSpeed = 0;
-
-      ledcWrite(PWM_CHANNEL_1, 0);
-      ledcWrite(PWM_CHANNEL_2, 0);
+      ledcWrite(PWM_CHANNEL_1, brakelv);
+      ledcWrite(PWM_CHANNEL_2, brakelv);
       break;
     case STATE_INIZIOCORSA: // 2
       // freno attivo, non dare potenza
@@ -382,7 +390,10 @@ void TaskControl(void *pvParameters) // task controllo motore
       break;
     case STATE_APERTURA: // 3
       // muovi a velocita'  costante
-      targetSpeed = rpmToRadSec(rpmOpen);
+      for(byte x = 0; x < rpmToRadSec(rpmOpen); x+=1)
+      {
+        targetSpeed = x;
+      }      
       break;
     case STATE_FINECORSA: // 4
       // freno disaattivo, non dare potenza
@@ -394,7 +405,7 @@ void TaskControl(void *pvParameters) // task controllo motore
       // muovi a velocita'  costante inversa e maggiore
       targetSpeed = rpmToRadSec(rpmClose);
       break;
-    case STATE_CONFIGURAZIONE:
+    case STATE_CONFIGURAZIONE:    //6
       // motore staccato per consentire movimento manuale, salva minimo e massimo valori rotaia
       minPulses = min(minPulses, currentPulses);
       maxPulses = max(maxPulses, currentPulses);
@@ -406,8 +417,11 @@ void TaskControl(void *pvParameters) // task controllo motore
       ledcWrite(PWM_CHANNEL_1, pwm1);
       ledcWrite(PWM_CHANNEL_2, pwm2);
       break;
+    case STATE_DELAY:
+      targetSpeed = 0;
+      ledcWrite(PWM_CHANNEL_1, 255);
+      ledcWrite(PWM_CHANNEL_2, 255);
     }
-
     if (currentSystemState != STATE_INACTIVE && currentSystemState != STATE_CONFIGURAZIONE)
     {
       power = controllo_vel_apre(targetSpeed - currentSpeed);
