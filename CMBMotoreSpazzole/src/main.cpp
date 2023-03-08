@@ -65,12 +65,12 @@ long timeoutStart = 0;
 long lastHallInterrupt = 0;
 int potenziometro = 0;
 float targetSpeed = 0;
-//variabili necessari per la taratura della misura di corrente.
+// variabili necessari per la taratura della misura di corrente.
 int ADC_1500_POS = 360;
 int CURR_OFFSET = 1930;
 int I_MAX_CLOSE = 200;
 int MOT_CURR = 0;
-byte brakelv = 255;       //livello di frenatura 
+byte brakelv = 255; // livello di frenatura
 
 float power = 0;
 uint8_t pwm1 = 0;
@@ -101,8 +101,8 @@ void initPins()
   pinMode(PULSANTE, INPUT_PULLUP);
   // pinMode(POTENZIOMETRO, INPUT_PULLUP);
 
-  //pinMode(H1, INPUT_PULLUP);
-  //pinMode(H2, INPUT_PULLUP);
+  // pinMode(H1, INPUT_PULLUP);
+  // pinMode(H2, INPUT_PULLUP);
 
   pinMode(ADC_BATT, INPUT);
 
@@ -121,8 +121,8 @@ void initSimpleFOC()
   // encoder
   encoder.quadrature = Quadrature::ON;
   encoder.pullup = Pullup::USE_EXTERN;
-  
-  //encoder.min_elapsed_time = 9.99;
+
+  // encoder.min_elapsed_time = 9.99;
 
   encoder.init();
   encoder.enableInterrupts(doA, doB);
@@ -178,7 +178,7 @@ void setup()
   initSimpleFOC();
 
   delay(50);
-  //misuro punto 0 della corrente solo una volta all'avvio
+  // misuro punto 0 della corrente solo una volta all'avvio
   CURR_OFFSET = analogRead(I_MOT);
 
   currentSystemState = STATE_CHIUSURA;
@@ -206,7 +206,7 @@ void setup()
       "Taskserial",
       5000,
       NULL,
-      //ESP_TASK_PRIO_MAX - 1,
+      // ESP_TASK_PRIO_MAX - 1,
       5,
       &TaskHandleSerial,
       1);
@@ -252,9 +252,9 @@ bool updateState(int pulses, float speed, int curr, long millis)
       // railLengthPulses = (maxPulses - minPulses);
       pulseStart = minPulses + (railLengthPulses * railStart);
       pulseEnd = minPulses + (railLengthPulses * railEnd);
-      
+
       logSerial.printf("Get;%d;%d;%d;%d;%d;%d;%f;%f;%f;%f;%f;%f;%f;%f;\n", timeoutDuration, timeoutOpen, pulseStart, pulseEnd, rpmOpen, rpmClose, railStart, railEnd, kpOpen, kiOpen, kdOpen, kpClose, kiClose, kdClose);
-      
+
       timeoutStart = millis;
       currentSystemState = STATE_APERTURA;
     }
@@ -274,11 +274,11 @@ bool updateState(int pulses, float speed, int curr, long millis)
     else if (radSecToRpm(currentSpeed) == 0)
     {
       encoder.update();
-      //currentPulses = 0;
+      // currentPulses = 0;
     }
     break;
   case STATE_INIZIOCORSA: // state 2
-    //currentPulses = 0;
+    // currentPulses = 0;
     /*if (buttonPressed || stopReceived)
     {
       buttonPressed = false;
@@ -292,7 +292,7 @@ bool updateState(int pulses, float speed, int curr, long millis)
     {
       timeoutStart = 0;
       currentSystemState = STATE_APERTURA;
-      
+
       // pulseOffset = -currentPulses;
 
       // PROVA RE INIZIALIZZAZIONE ENCODER
@@ -313,7 +313,7 @@ bool updateState(int pulses, float speed, int curr, long millis)
       currentSystemState = STATE_CHIUSURA;
     }
     break;
-  case STATE_CHIUSURA: // state 5
+  case STATE_CHIUSURA:                                     // state 5
     if (currentPulses <= pulseStart && curr > I_MAX_CLOSE) // da aggiungere controllo sulla corrente per garantire che l'anta si chiude bene
     {
       timeoutStart = millis;
@@ -329,7 +329,7 @@ bool updateState(int pulses, float speed, int curr, long millis)
 
       preferences.begin(CONFIG_NAMESPACE);
       preferences.putInt("rail", railLengthPulses);
-      preferences.end();      
+      preferences.end();
 
       logSerial.println("Configurazione completata, lunghezza rotaia: " + String(railLengthPulses));
 
@@ -338,7 +338,7 @@ bool updateState(int pulses, float speed, int curr, long millis)
 
       currentSystemState = STATE_DELAY;
     }
-  case STATE_DELAY:       //state 7
+  case STATE_DELAY: // state 7
     if (millis - timeoutStart > timeoutDuration && timeoutStart != 0)
     {
       timeoutStart = 0;
@@ -354,9 +354,10 @@ bool updateState(int pulses, float speed, int curr, long millis)
 void TaskControl(void *pvParameters) // task controllo motore
 {
   int pwmPower = 0;
+  int cycleTime = 0;
 
   while (1)
-  {    
+  {
     currentSpeed = encoder.getVelocity();
     currentSpeed = speedFilter(currentSpeed);
 
@@ -366,7 +367,7 @@ void TaskControl(void *pvParameters) // task controllo motore
     MOT_CURR = currentFilter(adcCurrentToMilliAmp(analogRead(I_MOT)));
 
     updateState(currentPulses, currentSpeed, MOT_CURR, millis());
-    
+
     switch (currentSystemState)
     {
     case STATE_START:
@@ -389,20 +390,54 @@ void TaskControl(void *pvParameters) // task controllo motore
       ledcWrite(PWM_CHANNEL_2, 255);
       break;
     case STATE_APERTURA: // 3
-      // muovi a velocita'  costante
-      targetSpeed = rpmToRadSec(rpmOpen);      
+      // aumenta target velocità in base a lunghezza rampa
+      if (targetSpeed == 0)
+      {
+        logSerial.printf("Apertura %d %f\n", rpmOpen, rpmToRadSec(rpmOpen));
+      }
+
+      if (targetSpeed < rpmToRadSec(rpmOpen))
+      {
+        // ad ogni ciclo aumenta la velocità in base alla proporzione di rampa percorsa
+        targetSpeed += ((millis() - cycleTime) / RAMPA_APERTURA) * rpmToRadSec(rpmOpen);
+      }
+      else
+      {
+        if (cycleTime != 0)
+        {
+          targetSpeed = rpmToRadSec(rpmOpen);
+        }
+      }
+
       break;
     case STATE_FINECORSA: // 4
-      // freno disaattivo, non dare potenza
+      // freno disattivo, non dare potenza
       targetSpeed = 0;
       ledcWrite(PWM_CHANNEL_1, 0);
       ledcWrite(PWM_CHANNEL_2, 0);
       break;
     case STATE_CHIUSURA: // 5
-      // muovi a velocita'  costante inversa e maggiore
-      targetSpeed = rpmToRadSec(rpmClose);
+      // aumenta target velocità in base a lunghezza rampa
+      if (targetSpeed == 0)
+      {
+        logSerial.printf("Chiusura %d %f\n", rpmClose, rpmToRadSec(rpmClose));
+      }
+
+      if (targetSpeed < rpmToRadSec(rpmClose))
+      {
+        // ad ogni ciclo aumenta la velocità in base alla proporzione di rampa percorsa
+        targetSpeed += ((millis() - cycleTime) / RAMPA_CHIUSURA) * rpmToRadSec(rpmClose);
+      }
+      else
+      {
+        if (cycleTime != 0)
+        {
+          targetSpeed = rpmToRadSec(rpmClose);
+        }
+      }
+
       break;
-    case STATE_CONFIGURAZIONE:    //6
+    case STATE_CONFIGURAZIONE: // 6
       // motore staccato per consentire movimento manuale, salva minimo e massimo valori rotaia
       minPulses = min(minPulses, currentPulses);
       maxPulses = max(maxPulses, currentPulses);
@@ -479,6 +514,8 @@ void TaskControl(void *pvParameters) // task controllo motore
       ledcWrite(PWM_CHANNEL_2, 0);
     }*/
 
+    cycleTime = millis();
+
     delay(1);
   }
 }
@@ -517,8 +554,6 @@ float getPercentagePosition()
     return (currentPulses - minPulses) / (maxPulses - minPulses);
   }
 }
-
-
 
 void TaskSerial(void *pvParameters) // task comunicazione con seriale
 {
@@ -603,7 +638,7 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
       logSerial.print(logSpeed);
       logSerial.print(",\"millis\":");
       logSerial.print(logMillis);
-      logSerial.print(",\"encoder\":");      
+      logSerial.print(",\"encoder\":");
       logSerial.print(logEncoder);
       logSerial.print(",\"battery\":");
       logSerial.print(logBattery);

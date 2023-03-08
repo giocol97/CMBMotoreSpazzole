@@ -23,6 +23,9 @@
 #define PWM_RESOLUTION 8
 #define POLES 21                 //encoder in quadratura:ON misura 4xPPR, quindi 12 poli pagnetici x 2 fronti.
 
+#define RAMPA_APERTURA 1000     // ms
+#define RAMPA_CHIUSURA 1000     // ms
+
 // default parametri impostabili
 #define DEFAULT_RAIL_LENGTH_RAD DEFAULT_RAIL_LENGTH_RAD / POLES // rad
 #define DEFAULT_RAIL_LENGTH_PULSES 1340                         // pulses
