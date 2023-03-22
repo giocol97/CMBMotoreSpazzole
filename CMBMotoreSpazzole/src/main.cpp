@@ -72,7 +72,8 @@ int I_MAX_CLOSE = 200;
 int MOT_CURR = 0;
 byte brakelv = 255;       //livello di frenatura 
 
-float power = 0;
+float powerO = 0;
+float powerC = 0;
 uint8_t pwm1 = 0;
 uint8_t pwm2 = 0;
 
@@ -105,6 +106,7 @@ void initPins()
   //pinMode(H2, INPUT_PULLUP);
 
   pinMode(ADC_BATT, INPUT);
+  pinMode(MOT_RELAY, OUTPUT);
 
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
@@ -179,9 +181,13 @@ void setup()
 
   delay(50);
   //misuro punto 0 della corrente solo una volta all'avvio
+  while(currentSpeed != 0)
+  {
+    
+  }
   CURR_OFFSET = analogRead(I_MOT);
-
-  currentSystemState = STATE_CHIUSURA;
+  digitalWrite(MOT_RELAY, HIGH);
+  currentSystemState = STATE_INACTIVE;
 
   xTaskCreatePinnedToCore(
       TaskControl,
@@ -241,7 +247,7 @@ bool updateState(int pulses, float speed, int curr, long millis)
       okReceived = false;
 
       preferences.begin(CONFIG_NAMESPACE);
-      railLengthPulses = preferences.getInt("rail", DEFAULT_RAIL_LENGTH_PULSES);
+      railLengthPulses = DEFAULT_RAIL_LENGTH_PULSES;
       preferences.end();
 
       if (railLengthPulses < 50)
@@ -279,7 +285,7 @@ bool updateState(int pulses, float speed, int curr, long millis)
     break;
   case STATE_INIZIOCORSA: // state 2
     //currentPulses = 0;
-    /*if (buttonPressed || stopReceived)
+    if (buttonPressed || stopReceived)
     {
       buttonPressed = false;
       stopReceived = false;
@@ -297,11 +303,12 @@ bool updateState(int pulses, float speed, int curr, long millis)
 
       // PROVA RE INIZIALIZZAZIONE ENCODER
       //encoder.init();
-    }*/
+    }
     break;
   case STATE_APERTURA: // state 3
-    if (currentPulses >= pulseEnd)
-    {
+    //if (currentPulses >= pulseEnd)
+    if (currentPulses >= pulseEnd && radSecToRpm(currentSpeed) < 60)
+    {      
       timeoutStart = millis;
       currentSystemState = STATE_FINECORSA;
     }
@@ -354,6 +361,9 @@ bool updateState(int pulses, float speed, int curr, long millis)
 void TaskControl(void *pvParameters) // task controllo motore
 {
   int pwmPower = 0;
+  powerC = 0;
+  powerO = 0;
+  int cycleTime = 0;
 
   while (1)
   {    
@@ -378,32 +388,79 @@ void TaskControl(void *pvParameters) // task controllo motore
 
       // minPulses = min(minPulses, currentPulses);
       // maxPulses = max(maxPulses, currentPulses);
+      powerO = 0;
+      powerC = 0;
+      pwm1 = 0;
+      pwm2 = 0;
       targetSpeed = 0;
-      ledcWrite(PWM_CHANNEL_1, brakelv);
-      ledcWrite(PWM_CHANNEL_2, brakelv);
+      digitalWrite(MOT_RELAY, LOW);
+      ledcWrite(PWM_CHANNEL_1, pwm1);
+      ledcWrite(PWM_CHANNEL_2, pwm2);
       break;
     case STATE_INIZIOCORSA: // 2
       // freno attivo, non dare potenza
-      targetSpeed = 0;
-      ledcWrite(PWM_CHANNEL_1, 255);
-      ledcWrite(PWM_CHANNEL_2, 255);
+      digitalWrite(MOT_RELAY, HIGH);
+      pwm1 = 255;
+      pwm2 = 255;
+      targetSpeed = 0;      
+      ledcWrite(PWM_CHANNEL_1, pwm1);
+      ledcWrite(PWM_CHANNEL_2, pwm2);
       break;
     case STATE_APERTURA: // 3
       // muovi a velocita'  costante
-      for(byte x = 0; x < rpmToRadSec(rpmOpen); x+=1)
+      digitalWrite(MOT_RELAY, HIGH);
+      if (targetSpeed == 0)
+      {
+        //logSerial.printf("Chiusura %d %f\n", rpmOpen, rpmToRadSec(rpmOpen));
+      }
+
+      if (targetSpeed < rpmToRadSec(rpmOpen))
+      {
+        //logSerial.printf("Apertura %d %f\n", (millis() - cycleTime), (((float)millis() - (float)cycleTime) / RAMPA_CHIUSURA) * rpmToRadSec(rpmOpen));
+        // ad ogni ciclo aumenta la velocità in base alla proporzione di rampa percorsa
+        targetSpeed += ((float)(1.0) / (float)RAMPA_CHIUSURA) * rpmToRadSec(rpmOpen);
+      }
+      else
+      {
+        targetSpeed = rpmToRadSec(rpmOpen);
+        /*if (cycleTime != 0)
+        {
+          //targetSpeed = rpmToRadSec(rpmOpen);
+        }*/
+      }
+      
+      /*for(byte x = 0; x < rpmToRadSec(rpmOpen); x+=1)
       {
         targetSpeed = x;
-      }      
+      }    */  
       break;
     case STATE_FINECORSA: // 4
       // freno disaattivo, non dare potenza
+      pwm1 = 0;
+      pwm2 = 0;
       targetSpeed = 0;
-      ledcWrite(PWM_CHANNEL_1, 0);
-      ledcWrite(PWM_CHANNEL_2, 0);
+      ledcWrite(PWM_CHANNEL_1, pwm1);
+      ledcWrite(PWM_CHANNEL_2, pwm2);
       break;
     case STATE_CHIUSURA: // 5
       // muovi a velocita'  costante inversa e maggiore
-      targetSpeed = rpmToRadSec(rpmClose);
+      if (targetSpeed == 0)
+      {
+        //logSerial.printf("Chiusura %d %f\n", rpmClose, rpmToRadSec(rpmClose));
+      }
+
+      if (abs(targetSpeed) < abs(rpmToRadSec(rpmClose)))
+      {
+        // ad ogni ciclo aumenta la velocità in base alla proporzione di rampa percorsa
+        targetSpeed += (1.0 / RAMPA_CHIUSURA) * rpmToRadSec(rpmClose);
+      }
+      else
+      {
+        if (cycleTime != 0)
+        {
+          targetSpeed = rpmToRadSec(rpmClose);
+        }
+      }
       break;
     case STATE_CONFIGURAZIONE:    //6
       // motore staccato per consentire movimento manuale, salva minimo e massimo valori rotaia
@@ -413,33 +470,33 @@ void TaskControl(void *pvParameters) // task controllo motore
 
       pwm1 = 0;
       pwm2 = 0;
-
       ledcWrite(PWM_CHANNEL_1, pwm1);
       ledcWrite(PWM_CHANNEL_2, pwm2);
       break;
     case STATE_DELAY:
+      pwm1 = 0;
+      pwm2 = 0;
       targetSpeed = 0;
-      ledcWrite(PWM_CHANNEL_1, 255);
-      ledcWrite(PWM_CHANNEL_2, 255);
+      ledcWrite(PWM_CHANNEL_1, pwm1);
+      ledcWrite(PWM_CHANNEL_2, pwm2);
     }
     if (currentSystemState != STATE_INACTIVE && currentSystemState != STATE_CONFIGURAZIONE)
     {
-      power = controllo_vel_apre(targetSpeed - currentSpeed);
+      powerO = controllo_vel_apre(targetSpeed - currentSpeed);
 
       // if (pulsantePremuto || true)
       //{
       if (targetSpeed != 0)
       {
-
         if (currentSystemState == STATE_CHIUSURA)
         {
-          power = controllo_vel_chiude(targetSpeed - currentSpeed);
+          powerC = controllo_vel_chiude(targetSpeed - currentSpeed);
           // float powerReverse = map(power, 0, 100, 100, 255);
 
-          if (power > 0)
+          if (powerC > 0)
           {
             // Serial.println("we are NOT braking  ");
-            pwm1 = map(power, 0, 100, 100, 255);
+            pwm1 = map(powerC, 0, 100, 100, 255);
             pwm2 = 255;
             ledcWrite(PWM_CHANNEL_1, pwm1);
             ledcWrite(PWM_CHANNEL_2, pwm2);
@@ -448,7 +505,7 @@ void TaskControl(void *pvParameters) // task controllo motore
           {
             // Serial.print("we are braking  ");
             // Serial.println();
-            pwm1 = map(-power * 2.55, 0, 255, 255, 0);
+            pwm1 = map(-powerC * 2.55, 0, 255, 255, 0);
             pwm2 = 255;
             ledcWrite(PWM_CHANNEL_1, pwm1);
             ledcWrite(PWM_CHANNEL_2, pwm2);
@@ -457,9 +514,10 @@ void TaskControl(void *pvParameters) // task controllo motore
         }
         else
         {
-          if (power > 0)
+          if (powerO > 0)
           {
-            pwm1 = 155 + power;
+            //pwm1 = 155 + power;
+            pwm1 = 95 + powerO*1.6;      //modificato il punto di partenza per addolcire lo spunto iniziale
             pwm2 = 0;
             ledcWrite(PWM_CHANNEL_1, pwm1);
             ledcWrite(PWM_CHANNEL_2, pwm2);
@@ -467,7 +525,7 @@ void TaskControl(void *pvParameters) // task controllo motore
           else
           {
             pwm1 = 0;
-            pwm2 = 155 - power;
+            pwm2 = 155 - powerO;
             ledcWrite(PWM_CHANNEL_1, pwm1);
             ledcWrite(PWM_CHANNEL_2, pwm2);
           }
@@ -481,8 +539,9 @@ void TaskControl(void *pvParameters) // task controllo motore
       ledcWrite(PWM_CHANNEL_1, 0);
       ledcWrite(PWM_CHANNEL_2, 0);
     }*/
-
     delay(1);
+    cycleTime = millis();
+
   }
 }
 
@@ -576,7 +635,7 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
       logState = currentSystemState;
       logPulses = currentPulses;
       logPosizione = getPercentagePosition() * 100;
-      logPwm = power;
+      logPwm = powerO;
       logCurrent = currentFilter(adcCurrentToMilliAmp(analogRead(I_MOT)));
       logTarget = radSecToRpm(targetSpeed);
       logSpeed = radSecToRpm(currentSpeed);

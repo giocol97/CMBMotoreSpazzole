@@ -10,6 +10,7 @@
 #define ADC_BATT 35
 #define IN1 33
 #define IN2 32
+#define MOT_RELAY 25
 
 #define PULSANTE 12
 #define POTENZIOMETRO 14
@@ -25,13 +26,14 @@
 
 // default parametri impostabili
 #define DEFAULT_RAIL_LENGTH_RAD DEFAULT_RAIL_LENGTH_RAD / POLES // rad
-#define DEFAULT_RAIL_LENGTH_PULSES 1340                         // pulses
+#define DEFAULT_RAIL_LENGTH_PULSES 1000                         // pulses
 #define DEFAULT_RAIL_START 0.02                                 //% RAIL_LENGTH
 #define DEFAULT_RAIL_END 0.98                                   //% RAIL_LENGTH
 #define DEFAULT_RAD_OPEN 18                                     // rad/s
 #define DEFAULT_RAD_CLOSE -7                                    // rad/s
 #define DEFAULT_TIMEOUT 4000                                    // ms
 #define DEFAULT_OPEN_TIMEOUT 700                                // ms
+#define RAMPA_CHIUSURA 2000
 
 // default parametri PID
 #define DEFAULT_KP_OPEN 0.5

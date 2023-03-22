@@ -27,8 +27,10 @@ function addToCsv(json) {
     var time = obj.millis;
     //var angle = obj.angle;
     var pulses = obj.pulses;
-    var speed = parseFloat(obj.speed).toFixed(2);
-    var current = parseFloat(obj.current).toFixed(2);
+    var speed = obj.speed;
+    var current = obj.current;
+    //var speed = parseFloat(obj.speed).toFixed(2);
+    //var current = parseFloat(obj.current).toFixed(2);
     var target = obj.target;
     //var pwm = obj.pwm;
     var pwm1 = obj.pwm1;
@@ -38,7 +40,7 @@ function addToCsv(json) {
     var encoder = obj.encoder;
     var battery = obj.battery;
 
-    csv += time + "," + pulses + "," + speed + "," + current + "," + target + "," + pwm1 + "," + pwm2 + "," /*+ position + "," */+ (state) + "," + (encoder) + "," + (battery) + "\n";
+    csv += time + "," + pulses + "," + speed + "," + current + "," + target + "," + pwm1 + "," + pwm2 + "," /*+ position + "," */ + (state) + "," + (encoder) + "," + (battery) + "\n";
 }
 
 /*function saveCsv() {
@@ -190,7 +192,7 @@ function showData(json) {
             $("#endConfig-button").show();
             $("#startContTest-button").hide();
             break;
-		case 7:
+        case 7:
             state = "Pausa";
             color = "brown";
             $("#start-button").show();
@@ -199,7 +201,7 @@ function showData(json) {
             $("#endConfig-button").hide();
             $("#startContTest-button").hide();
             $("#endContTest-button").hide();
-            break;	
+            break;
     }
 
     $("#state").text(state);
@@ -374,6 +376,7 @@ async function endContTest() {
 
 
 async function resetDrive() {
+    csv = csvHeader;
     await eel.reset_drive()();
 }
 
