@@ -14,7 +14,6 @@ serialStarted = False
 def start_drive():
     ser.write(b'start\n')
 
-
 @eel.expose
 def stop_drive():
     ser.write(b'stop\n')
@@ -111,6 +110,7 @@ def serial_thread():
             if(not serialStarted):
                 ser = serial.Serial(serialPort, 115200, timeout=1)
                 # ser.open()
+                ser.write(b'TYPE;\n')
                 eel.showConnected(serialPort)
                 serialStarted = True
 
@@ -127,12 +127,14 @@ def serial_thread():
                 try:
                     y = json.loads(jsonData)  # check if valid json
 
-                    eel.showData(jsonData)
-                    #plt.plot(xpoints, ypoints)
-                    # plt.show()
+                    if 'type' in y:
+                        eel.setType(y['type'])
+                        eel.sleep(0.05)
+                        ser.write(b'sendData1;\n')
+                    else:
+                        eel.showData(jsonData)
 
                 except:
-                    # print(jsonData)
                     eel.appendToLog(jsonData)
         else:
             if(serialStarted):

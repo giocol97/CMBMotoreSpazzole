@@ -573,10 +573,12 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
   int logEncoder = 0;
   int logBattery = 0;
 
+  bool sendDataEnabled = false;
+
   while (1)
   {
 
-    if (millis() - lastSent >= 20)
+    if (millis() - lastSent >= 20 && sendDataEnabled)
     {
 
       if (pulsantePremuto != !digitalRead(PULSANTE))
@@ -636,7 +638,7 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
       logSerial.print(logTarget);
       logSerial.print(",\"speed\":");
       logSerial.print(logSpeed);
-      logSerial.print(",\"millis\":");
+      logSerial.print(",\"time\":");
       logSerial.print(logMillis);
       logSerial.print(",\"encoder\":");
       logSerial.print(logEncoder);
@@ -660,10 +662,28 @@ void TaskSerial(void *pvParameters) // task comunicazione con seriale
         logSerial.println("startOk");
       }
 
+      if (command.indexOf("TYPE") >= 0)
+      {
+        logSerial.println("{\"TYPE\":\"BORTOLUZZI\"}");
+        continue;
+      }
+
       if (command.indexOf("stop") >= 0)
       {
         stopReceived = true;
         logSerial.println("stopOk");
+      }
+
+      if (command.indexOf("sendData0") >= 0)
+      {
+        sendDataEnabled = false;
+        logSerial.println("sendData Off");
+      }
+
+      if (command.indexOf("sendData1") >= 0)
+      {
+        sendDataEnabled = true;
+        logSerial.println("sendData On");
       }
 
       if (command.indexOf("config0") >= 0)

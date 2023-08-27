@@ -10,18 +10,6 @@
   <link href="style.css" rel="stylesheet">
 
   <script type='text/javascript' src='/eel.js'></script>
-
-  <script type='text/javascript'>
-
-    async function choose_op() {
-      let op = document.getElementById('input-box').value;
-      let file_div = document.getElementById('file-name');
-
-      let random_filename = await eel.choose_op(op)();
-      file_div.innerHTML = random_filename;
-    }
-
-  </script>
 </head>
 
 <body>
@@ -49,16 +37,16 @@
 
 
 
-        <button type="button" class="btn btn-success" onclick="startConfig()" id="startConfig-button"
+        <button type="button" class="btn btn-success typeBortoluzzi" onclick="startConfig()" id="startConfig-button"
           style="font-size:large; margin-top:2em; display:none;">Inizia Configurazione Rotaia</button>
 
-        <button type="button" class="btn btn-danger" onclick="endConfig()" id="endConfig-button"
+        <button type="button" class="btn btn-danger typeBortoluzzi" onclick="endConfig()" id="endConfig-button"
           style="font-size:large; margin-top:2em; display:none;">Termina Configurazione Rotaia</button>
 
-        <button type="button" class="btn btn-success" onclick="startContTest()" id="startContTest-button"
+        <button type="button" class="btn btn-success typeBortoluzzi" onclick="startContTest()" id="startContTest-button"
           style="font-size:large; margin-top:2em; display:none;">Inizia Test Continuo</button>
 
-        <button type="button" class="btn btn-danger" onclick="endContTest()" id="endContTest-button"
+        <button type="button" class="btn btn-danger typeBortoluzzi" onclick="endContTest()" id="endContTest-button"
           style="font-size:large; margin-top:2em; display:none;">Termina Test Continuo</button>
 
         <h4>
@@ -66,53 +54,53 @@
         </h4>
 
         <div class="row">
-          <div class="dataElement">
+          <div class="dataElement typeBortoluzzi typeSalice">
             <div>Time:</div> <br>
             <div id="time">0</div>
           </div>
-          <div class="dataElement">
+          <div class="dataElement typeBortoluzzi typeSalice">
             <div>Pulses:</div> <br>
             <div id="pulses">0</div>
           </div>
-          <div class="dataElement">
+          <div class="dataElement typeBortoluzzi typeSalice">
             <div>Speed:</div><br>
             <div id="speed">0</div>
           </div>
-          <div class="dataElement" style="display:none;">
-            <div>Position (%):</div> <br>
-            <div id="position">0</div>
-          </div>
-          <div class="dataElement">
+          <div class="dataElement typeBortoluzzi">
             <div>PWM1:</div> <br>
             <div id="pwm1">0</div>
           </div>
-          <div class="dataElement">
+          <div class="dataElement typeBortoluzzi">
             <div>PWM2:</div> <br>
             <div id="pwm2">0</div>
           </div>
-          <div class="dataElement">
+          <div class="dataElement typeBortoluzzi typeSalice">
             <div>Target:</div> <br>
             <div id="target">0</div>
           </div>
-          <div class="dataElement">
+          <div class="dataElement typeBortoluzzi typeSalice">
             <div>State:</div><br>
             <div id="state">0</div>
           </div>
-          <div class="dataElement">
+          <div class="dataElement typeBortoluzzi">
             <div>Current:</div><br>
             <div id="current">0</div>
           </div>
-          <div class="dataElement">
+          <div class="dataElement typeBortoluzzi typeSalice">
             <div>Voltage:</div><br>
             <div id="battery">0</div>
           </div>
-          <div class="dataElement">
+          <div class="dataElement typeSalice">
+            <div>Control:</div> <br>
+            <div id="control">0</div>
+          </div>
+          <div class="dataElement typeBortoluzzi">
             <div>Encoder:</div><br>
             <div id="encoder">0</div>
           </div>
         </div>
 
-        <!--
+        <!-- bortoluzzi
       long tmptimeoutDuration = UNDEFINED_VALUE;
       int tmppulseStart = UNDEFINED_VALUE;
       int tmppulseEnd = UNDEFINED_VALUE;
@@ -122,9 +110,29 @@
       float tmprailEnd = UNDEFINED_VALUE;
 
       sscanf(command.c_str(), "Set;%d;%d;%d;%d;%d;%f;%f;", &tmptimeoutDuration, &tmppulseStart, &tmppulseEnd, &tmprpmOpen, &tmprpmClose, &tmprailStart, &tmprailEnd);-->
+      
+      
+        <!-- salice
+// web parameters TODO define defaults in header
+float vmax = 100;                         // rad/s
+float vmax_frenata = 400;                 // rad/s
+float vmin_frenata = 200;                 // rad/s
+float c_frenata = 3;                      // V*10
+float vmin = 50;                          // rad/s
+float v_tocco = 25;                       // rad/s
+float rampDuration = UNDEFINED_VALUE;     // ms TODO use
+int pulseStart = RAIL_LENGTH_DEBUG * 0.1; // pulses
+int pulseStop = RAIL_LENGTH_DEBUG * 0.75; // pulses
+int pulseEnd = RAIL_LENGTH_DEBUG * 0.9;   // pulses
+float tend = 0.3;                         // V
+float tbrake = 0.7;
+long timeoutDuration = 10000;
+        
+      sscanf(command.c_str(), "Set;%f;%f;%f;%d;%d;%d;%f;%f;%d;%f;%f;%f;%f", /*&tmpTarget,*/ &tmpvmax, &tmpvmin, &tmprampDuration, &tmppulseStart, &tmppulseStop, &tmppulseEnd, &tmptend, &tmptbrake, &tmptimeoutDuration, &tmpvmaxfrenata, &tmpvminfrenata, &tmpcfrenata, &tmpvtocco);-->
 
-        <div class="row row-box">
-          <div class="title-box">Costanti controllo algoritmo</div>
+      <div class="title-box">Costanti controllo algoritmo</div>
+
+        <div class="row row-box typeBortoluzzi">
           <div class="input-box">timeoutDuration <input id="input-timeDuration" value="-123456" type="text"></div>
           <div class="input-box">timeoutOpen <input id="input-timeOpen" value="-123456" type="text"></div>
           <div class="input-box">pulseStart <input id="input-pulseStart" value="-123456" type="text"></div>
@@ -135,18 +143,43 @@
           <div class="input-box">railEnd <input id="input-railEnd" value="-123456" type="text"></div>
           <div>Valore "-123456" significa non modificare valore già presente su sistema. </div>
         </div>
-        <div class="row row-box">
+        <div class="row row-box typeBortoluzzi">
           <div class="title-box">PID Apertura</div>
           <div class="input-box">P <input id="input-pidOpenKp" value="-123456" type="text"></div>
           <div class="input-box">I <input id="input-pidOpenKi" value="-123456" type="text"></div>
           <div class="input-box">D <input id="input-pidOpenKd" value="-123456" type="text"></div>
         </div>
-        <div class="row row-box">
+        <div class="row row-box typeBortoluzzi">
           <div class="title-box">PID Chiusura</div>
           <div class="input-box">P <input id="input-pidCloseKp" value="-123456" type="text"></div>
           <div class="input-box">I <input id="input-pidCloseKi" value="-123456" type="text"></div>
           <div class="input-box">D <input id="input-pidCloseKd" value="-123456" type="text"></div>
         </div>
+
+        <div class="row typeSalice">
+          <div class="input-box">vmax <input id="input-vmax" value="-123456" type="text"></div>
+          <div class="input-box">vmin <input id="input-vmin" value="-123456" type="text"></div>
+          <div class="input-box">rail length <input id="input-rail" value="-123456" type="text"></div>
+          <div class="input-box">pulse start <input id="input-pulseStart" value="-123456" type="text"></div>
+          <div class="input-box">pulse stop <input id="input-pulseStop" value="-123456" type="text"></div>
+          <div class="input-box">pulse end <input id="input-pulseEnd" value="-123456" type="text"></div>
+          <div class="input-box">torque end <input id="input-tend" value="-123456" type="text"></div>
+          <div class="input-box">torque brake <input id="input-tbrake" value="-123456" type="text"></div>
+          <div class="input-box">timeout duration <input id="input-timeoutDuration" value="-123456" type="text"></div>
+
+          <div class="input-box">vmax frenata <input id="input-vmaxfrenata" value="-123456" type="text"></div>
+          <div class="input-box">vmin frenata <input id="input-vminfrenata" value="-123456" type="text"></div>
+          <div class="input-box">c frenata <input id="input-cfrenata" value="-123456" type="text"></div>
+          <div class="input-box">v tocco <input id="input-vtocco" value="-123456" type="text"></div>
+
+          <br>
+          <button class="btn btn-success" onclick="sendData()">Send to micro</button>
+
+          <input type="text" id="output-box" value="Set;100;50;0;219;1642.5;1971;0.3;0.7;10000;400;200;3;25">
+          <button class="btn btn-warning" onclick="setValues()">Set form</button>
+
+        </div>
+
         <div class="row">
           <button class="btn btn-success" onclick="sendData()">Carica parametri</button>
           <button class="btn btn-success" onclick="getData()">Ricevi parametri dal micro</button>
